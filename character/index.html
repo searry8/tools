@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caractères spéciaux</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --card: #fff; --text: #1c1c1a; --muted: #77776f;
+    --border: #e0e0da; --accent: #3b5bdb; --accent-soft: #e7ecff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --card: #1f1f23; --text: #f0f0ee; --muted: #8e8e98;
+      --border: #333339; --accent: #8da2ff; --accent-soft: #2a2f4d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 120px; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  input[type=search] {
+    flex: 1; min-width: 200px; padding: 10px 14px; font-size: 1rem;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); color: var(--text);
+  }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tab {
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--card); color: var(--text); cursor: pointer; font-size: .85rem;
+  }
+  .tab.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  section { margin-bottom: 28px; }
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; }
+  .c {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); color: var(--text); cursor: pointer; padding: 0;
+    transition: transform .08s, border-color .1s;
+  }
+  .c:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .c:active { transform: scale(.94); }
+  .c.ok { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .vide { color: var(--muted); text-align: center; padding: 40px 0; }
+  #zone {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
+    border-top: 1px solid var(--border); padding: 12px 16px;
+  }
+  #zone div { max-width: 860px; margin: 0 auto; display: flex; gap: 8px; }
+  #zone input {
+    flex: 1; padding: 10px 14px; font-size: 1.1rem; border: 1px solid var(--border);
+    border-radius: 10px; background: var(--bg); color: var(--text);
+  }
+  button.act {
+    padding: 0 16px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); color: var(--text); cursor: pointer; font-size: .9rem;
+  }
+  button.main { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #toast {
+    position: fixed; top: 16px; left: 50%; transform: translate(-50%, -80px);
+    background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 999px;
+    font-size: .9rem; transition: transform .2s; pointer-events: none;
+  }
+  #toast.show { transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Caractères spéciaux</h1>
+  <p class="sub">Cliquez sur un caractère pour le copier. Il s'ajoute aussi à la zone en bas, pour en copier plusieurs d'un coup.</p>
+
+  <div class="tools">
+    <input type="search" id="q" placeholder="Filtrer par catégorie (ex. flèches, grec, monnaies)…" autocomplete="off">
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="liste"></div>
+</main>
+
+<div id="zone">
+  <div>
+    <input id="tampon" placeholder="Votre sélection…" aria-label="Sélection">
+    <button class="act main" id="copierTout">Copier</button>
+    <button class="act" id="vider">Vider</button>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script src="data.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const liste = $("liste"), tabs = $("tabs"), q = $("q"), tampon = $("tampon"), toast = $("toast");
+  let actif = "Tout";
+  let toastTimer;
+
+  function afficherToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 1200);
+  }
+
+  async function copier(texte) {
+    try {
+      await navigator.clipboard.writeText(texte);
+      return true;
+    } catch (e) {
+      // Solution de secours (ouverture en file://, vieux navigateurs)
+      const t = document.createElement("textarea");
+      t.value = texte;
+      t.style.position = "fixed"; t.style.opacity = "0";
+      document.body.appendChild(t);
+      t.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (_) {}
+      t.remove();
+      return ok;
+    }
+  }
+
+  function decouper(chars) {
+    return chars.split(/\s+/).filter(Boolean);
+  }
+
+  function rendreOnglets() {
+    const noms = ["Tout", ...CATEGORIES.map((c) => c.nom)];
+    tabs.innerHTML = "";
+    noms.forEach((nom) => {
+      const b = document.createElement("button");
+      b.className = "tab" + (nom === actif ? " on" : "");
+      b.textContent = nom;
+      b.onclick = () => { actif = nom; rendreOnglets(); rendre(); };
+      tabs.appendChild(b);
+    });
+  }
+
+  function rendre() {
+    const filtre = q.value.trim().toLowerCase();
+    liste.innerHTML = "";
+    let n = 0;
+    CATEGORIES.forEach((cat) => {
+      if (actif !== "Tout" && cat.nom !== actif) return;
+      if (filtre && !cat.nom.toLowerCase().includes(filtre)) return;
+      n++;
+      const sec = document.createElement("section");
+      sec.innerHTML = "<h2></h2><div class='grid'></div>";
+      sec.querySelector("h2").textContent = cat.nom;
+      const grid = sec.querySelector(".grid");
+      decouper(cat.chars).forEach((ch) => {
+        const b = document.createElement("button");
+        b.className = "c";
+        b.textContent = ch;
+        b.title = "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
+        b.onclick = async () => {
+          tampon.value += ch;
+          const ok = await copier(ch);
+          b.classList.add("ok");
+          setTimeout(() => b.classList.remove("ok"), 300);
+          afficherToast(ok ? "« " + ch + " » copié" : "Copie impossible");
+        };
+        grid.appendChild(b);
+      });
+      liste.appendChild(sec);
+    });
+    if (!n) liste.innerHTML = "<p class='vide'>Aucune catégorie trouvée.</p>";
+  }
+
+  $("copierTout").onclick = async () => {
+    if (!tampon.value) return;
+    afficherToast((await copier(tampon.value)) ? "Sélection copiée" : "Copie impossible");
+  };
+  $("vider").onclick = () => { tampon.value = ""; tampon.focus(); };
+  q.addEventListener("input", rendre);
+
+  rendreOnglets();
+  rendre();
+</script>
+</body>
+</html>
